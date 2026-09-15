@@ -157,6 +157,22 @@ export default function App() {
     if (statDrops.sat) stateRef.newVitals.sat -= statDrops.sat;
     if (statDrops.hr) stateRef.newVitals.hr = statDrops.hr;
     if (statDrops.bp) stateRef.newVitals.bp = statDrops.bp;
+    const triggerError = (msg, toastJoke, vitalityPenalty, statDrops, stateRef) => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 400);
+    if (toastJoke) setToast(toastJoke);
+    
+    // מפעיל רטט קצר בטלפון הסלולרי (אם המכשיר תומך)
+    if (navigator.vibrate) {
+      navigator.vibrate([200]);
+    }
+    
+    stateRef.newLogs.push(createMsg(msg, 'error'));
+    stateRef.newVitality -= vitalityPenalty;
+    if (statDrops.sat) stateRef.newVitals.sat -= statDrops.sat;
+    if (statDrops.hr) stateRef.newVitals.hr = statDrops.hr;
+    if (statDrops.bp) stateRef.newVitals.bp = statDrops.bp;
+  };
   };
 
   const handleExecuteActions = () => {
@@ -378,7 +394,13 @@ export default function App() {
               })}
             </div>
             
-            <button className="submit-btn" onClick={handleExecuteActions}>בצעי פעולות</button>
+            <button 
+  className="submit-btn" 
+  onClick={handleExecuteActions}
+  disabled={selectedActions.length === 0}
+>
+  בצעי פעולות
+</button>
             
             <button className="fab-senior" onClick={handleConsultSenior} title="התייעצות עם הכונן">
               📱
