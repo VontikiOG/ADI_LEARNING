@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f0f9ff;
+  background-color: #f8fafc;
   color: #333;
   padding: 1rem;
 }
@@ -16,17 +16,41 @@ body {
   margin: 0 auto;
   background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  overflow: hidden;
+  position: relative;
+  min-height: 95vh;
+  padding-bottom: 80px; /* מקום לכפתור המרחף */
+}
+
+/* מד זמן חזותי */
+.vitality-container {
+  padding: 1rem 1.5rem;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.vitality-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.vitality-bar-bg {
+  height: 10px;
+  background-color: #e2e8f0;
+  border-radius: 5px;
   overflow: hidden;
 }
 
-.header {
-  background-color: #bae6fd;
-  padding: 1rem;
-  text-align: center;
-  border-bottom: 2px solid #7dd3fc;
+.vitality-bar-fill {
+  height: 100%;
+  transition: width 0.4s ease, background-color 0.4s ease;
 }
 
+/* מוניטור חכם שנדבק למעלה */
 .monitor {
   display: flex;
   justify-content: space-around;
@@ -34,7 +58,11 @@ body {
   color: #a7f3d0;
   padding: 1rem;
   font-family: monospace;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .vital-sign {
@@ -48,26 +76,58 @@ body {
   color: #94a3b8;
 }
 
+/* אנימציות מוניטור */
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); color: #fca5a5; }
+  100% { transform: scale(1); }
+}
+
+@keyframes flashRed {
+  0% { color: #a7f3d0; }
+  50% { color: #ef4444; text-shadow: 0 0 10px #ef4444; }
+  100% { color: #a7f3d0; }
+}
+
+.pulse-fast { animation: heartbeat 0.4s infinite; }
+.pulse-slow { animation: heartbeat 1.5s infinite; }
+.alert-flash { animation: flashRed 1s infinite; }
+
 .content {
   padding: 1.5rem;
 }
 
-.log-box {
+/* יומן צ'אט נגלל */
+.chat-box {
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1rem;
   margin-bottom: 1.5rem;
-  max-height: 200px;
+  height: 250px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
 }
 
-.log-entry {
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
+.bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  max-width: 85%;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.bubble.system { background: white; align-self: flex-start; border: 1px solid #e2e8f0; border-bottom-right-radius: 4px; }
+.bubble.user { background: #dbeafe; color: #1e40af; align-self: flex-end; border-bottom-left-radius: 4px; }
+.bubble.error { background: #fee2e2; color: #991b1b; align-self: flex-start; border: 1px solid #fca5a5; border-bottom-right-radius: 4px; }
+.bubble.success { background: #d1fae5; color: #065f46; align-self: flex-start; border: 1px solid #6ee7b7; border-bottom-right-radius: 4px; }
+.bubble.senior { background: #fef08a; color: #854d0e; align-self: flex-start; font-style: italic; border-bottom-right-radius: 4px; }
+
+/* כרטיסיות פעולה (Actions Cards) */
 .actions-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -75,61 +135,96 @@ body {
   margin-bottom: 1.5rem;
 }
 
-.action-label {
+.action-card {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: #f1f5f9;
-  padding: 0.8rem;
-  border-radius: 8px;
+  background-color: white;
+  border: 2px solid #e2e8f0;
+  padding: 1rem;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
-.action-label:hover {
-  background-color: #e2e8f0;
+.action-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
 }
+
+.action-card.selected {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.action-icon { font-size: 1.2rem; }
+.action-text { font-size: 0.9rem; font-weight: 500; }
 
 .submit-btn {
   width: 100%;
   background-color: #34d399;
   color: white;
   border: none;
-  padding: 1rem;
-  border-radius: 8px;
+  padding: 1.2rem;
+  border-radius: 12px;
   font-size: 1.1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: transform 0.1s, background 0.2s;
 }
 
-.submit-btn:hover {
-  background-color: #10b981;
-}
+.submit-btn:active { transform: scale(0.98); }
 
-.success-box {
-  background-color: #d1fae5;
-  border: 2px solid #10b981;
-  padding: 1.5rem;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.pearl-box {
-  margin-top: 1rem;
-  background-color: #fce4ec;
-  padding: 1rem;
-  border-radius: 8px;
-  font-style: italic;
-  font-size: 0.95rem;
-}
-
-.reset-btn {
-  margin-top: 1rem;
-  background-color: #cbd5e1;
-  color: #333;
+/* כפתור כונן מרחף (FAB) */
+.fab-senior {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: #fde047;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  font-size: 1.8rem;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
   cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  z-index: 1000;
 }
+
+.fab-senior:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+
+/* הודעות פופ-אפ עוקצניות (Toast) */
+.toast-container {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  z-index: 2000;
+  text-align: center;
+  white-space: nowrap;
+  animation: slideUp 0.3s forwards;
+}
+
+/* אנימציות כלליות */
+@keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+}
+
+.shake-screen { animation: shake 0.4s ease-in-out; }
