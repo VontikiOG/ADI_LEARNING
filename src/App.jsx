@@ -81,7 +81,7 @@ export default function App() {
     if (newStage === 0) {
       // 1. מניעת צ'יטים וסדר פעולות שגוי
       if (selectedActions.includes('surfactant') && !selectedActions.includes('cpap')) {
-        newLogs.push('❌ את קופצת מהר מדי! גם למיה קולוצ'י לקח זמן להבין שהיא מאוהבת במנואל. תתחילי בייצוב ומשם נתקדם.');
+newLogs.push("❌ את קופצת מהר מדי! גם למיה קולוצ'י לקח זמן להבין שהיא מאוהבת במנואל. תתחילי בייצוב ומשם נתקדם.");
         newVitality -= 20;
         newVitals.sat -= 2;
         isPenaltyApplied = true;
