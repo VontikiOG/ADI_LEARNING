@@ -1,33 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// --- מאגר המקרים (Cases Database) ---
+// עוזר ליצירת מזהה ייחודי לבועות צ'אט
+const createMsg = (text, sender) => ({ id: Date.now() + Math.random(), text, sender });
+
+// --- מאגר המקרים (עם אייקונים לכרטיסיות) ---
 const CASES = {
   nicu: {
     id: 'nicu',
-    title: '👶 פגייה: מצוקה נשימתית (בינוני)',
+    title: '👶 פגייה: מצוקה נשימתית',
     initialVitals: { hr: 165, rr: 78, sat: 86, bp: '45/25' },
     stages: [
       {
         id: 0,
         description: 'האחות קוראת לך בדחיפות: פג בשבוע 32, בן 4 שעות. מראה סימני מצוקה נשימתית (רתיעות אינטרקוסטליות, Grunting).',
         actions: [
-          { id: 'cpap', label: 'חיבור ל-CPAP' },
-          { id: 'cxr', label: 'צילום חזה (CXR)' },
-          { id: 'cultures', label: 'לקיחת תרביות דם' },
-          { id: 'surfactant', label: 'מתן סורפקטנט' },
-          { id: 'abx', label: 'אנטיביוטיקה (אמפיצילין + גנטמיצין)' },
-          { id: 'acamoli', label: 'מתן אקמולי' }
+          { id: 'cpap', icon: '🫁', label: 'חיבור ל-CPAP' },
+          { id: 'cxr', icon: '🩻', label: 'צילום חזה (CXR)' },
+          { id: 'cultures', icon: '🩸', label: 'לקיחת תרביות' },
+          { id: 'surfactant', icon: '💉', label: 'מתן סורפקטנט' },
+          { id: 'abx', icon: '💊', label: 'אנטיביוטיקה' },
+          { id: 'acamoli', icon: '🍼', label: 'מתן אקמולי' }
         ],
-        hint: 'הילד במצוקה נשימתית, תחשבי על ABC. קודם כל תמיכה נשימתית לפני שרצים לדברים מורכבים יותר.'
+        hint: 'תחשבי על ABC. קודם כל תמיכה נשימתית לפני שרצים לדברים מורכבים יותר.'
       },
       {
         id: 1,
-        description: 'שלב ב: ה-CPAP שיפר את הסטורציה. הצילום חזר ומראה תמונה קלאסית של RDS. בבדיקת גזים בדם הילד מתחיל להתעייף וצובר CO2. מה הצעד הבא?',
+        description: 'שלב ב: ה-CPAP שיפר סטורציה. הצילום חזר (זכוכית חולית = RDS). בגזים בדם הילד מתחיל להתעייף. מה הצעד הבא?',
         actions: [
-          { id: 'intubate_surf', label: 'אינטובציה ומתן סורפקטנט' },
-          { id: 'lasix', label: 'מתן פוסיד (Lasix)' },
-          { id: 'feed', label: 'התחלת כלכלה דרך זונדה' },
-          { id: 'wait', label: 'המשך מעקב בלבד' }
+          { id: 'intubate_surf', icon: '🫁', label: 'אינטובציה וסורפקטנט' },
+          { id: 'lasix', icon: '💊', label: 'מתן פוסיד (Lasix)' },
+          { id: 'feed', icon: '🍼', label: 'כלכלה בזונדה' },
+          { id: 'wait', icon: '⏳', label: 'מעקב בלבד' }
         ],
         hint: 'הוא מתעייף על ה-CPAP והצילום מתאים ל-RDS. הוא צריך את החומר שחסר לפגים בריאות.'
       }
@@ -35,48 +38,48 @@ const CASES = {
   },
   dka: {
     id: 'dka',
-    title: '🚨 מיון/ט.נמרץ: ילד מיובש מעורפל הכרה (קשה)',
+    title: '🚨 ט.נמרץ: ילד מעורפל הכרה (DKA)',
     initialVitals: { hr: 155, rr: 45, sat: 98, bp: '80/40' },
     stages: [
       {
         id: 0,
-        description: 'שלב א (מיון): ילד בן 8 מגיע באמבולנס. ההורים מדווחים ששתה והשתין המון בשבועיים האחרונים. כעת מעורפל הכרה, נושם נשימות עמוקות (קוסמאול) עם ריח אצטון. הילד נראה מיובש מאוד ולחץ הדם נמוך.',
+        description: 'ילד בן 8. מדווחים ששתה והשתין המון לאחרונה. כעת מעורפל הכרה, נשימות קוסמאול, ריח אצטון. נראה מיובש ולחץ הדם נמוך.',
         actions: [
-          { id: 'ns_bolus', label: 'בולוס נוזלים (Normal Saline 10-20cc/kg)' },
-          { id: 'insulin_bolus', label: 'בולוס אינסולין מהיר לוריד' },
-          { id: 'labs', label: 'לקיחת גזים, סוכר ואלקטרוליטים' },
-          { id: 'intubation', label: 'אינטובציה מיידית' }
+          { id: 'ns_bolus', icon: '💧', label: 'בולוס Normal Saline' },
+          { id: 'insulin_bolus', icon: '💉', label: 'פוש אינסולין מהיר' },
+          { id: 'labs', icon: '🩸', label: 'גזים ואלקטרוליטים' },
+          { id: 'intubation', icon: '🫁', label: 'אינטובציה מיידית' }
         ],
-        hint: 'הוא בהלם תת-נפחי (שוק). ב-DKA לעולם לא נותנים בולוס אינסולין לפני נוזלים! קודם מחזירים נפח ובודקים מעבדה.'
+        hint: 'ב-DKA לעולם לא נותנים אינסולין לפני נוזלים! קודם מחזירים נפח.'
       },
       {
         id: 1,
-        description: 'שלב ב (קבלת מעבדה): בולוס הנוזלים ייצב את לחץ הדם ל-100/60. מעבדה: סוכר 550, pH 7.05, ביקרבונט 8. האשלגן שלו 3.5 (תקין-נמוך, אבל יש חסר תאי עצום). איך נמשיך?',
+        description: 'בולוס הנוזלים ייצב ל"ד. סוכר 550, pH 7.05. האשלגן 3.5 (תקין-נמוך). איך נמשיך?',
         actions: [
-          { id: 'insulin_drip', label: 'תחילת אירוי אינסולין מתמשך (0.1 U/kg/hr)' },
-          { id: 'add_k', label: 'הוספת אשלגן (KCL) לנוזלי האחזקה' },
-          { id: 'bicarb', label: 'מתן ביקרבונט לתיקון החמצת' },
-          { id: 'push_k', label: 'פוש אשלגן מהיר לוריד' }
+          { id: 'insulin_drip', icon: '💧', label: 'אירוי אינסולין רציף' },
+          { id: 'add_k', icon: '💊', label: 'אשלגן לנוזלי אחזקה' },
+          { id: 'bicarb', icon: '🧪', label: 'מתן ביקרבונט' },
+          { id: 'push_k', icon: '☠️', label: 'פוש אשלגן מהיר' }
         ],
-        hint: 'החמצת תתקן את עצמה עם אינסולין ונוזלים. היזהרי עם האשלגן - הוא יצנח כשהאינסולין יתחיל לפעול.'
+        hint: 'החמצת תתקן את עצמה עם אינסולין ונוזלים. היזהרי עם האשלגן - הוא יצנח כשהאינסולין יעבוד.'
       },
       {
         id: 2,
-        description: 'שלב ג (ט.נמרץ): עברו 6 שעות של טיפול. לפתע הילד מתלונן על כאב ראש עז ומקיא. במוניטור: הדופק צנח ל-50, ולחץ הדם זינק ל-140/90. הוא מפסיק להגיב לכאב.',
+        description: 'עברו 6 שעות. הילד מקיא ומתלונן על כאב ראש עז. במוניטור: דופק צנח ל-50, ל"ד זינק ל-140/90. הוא מפסיק להגיב לכאב.',
         actions: [
-          { id: 'mannitol', label: 'מתן מניטול או סליין היפרטוני (3%) מיידי' },
-          { id: 'ct_head', label: 'שליחה דחופה ל-CT ראש' },
-          { id: 'elevate_head', label: 'הגבהת מראשות המיטה ל-30 מעלות' },
-          { id: 'stop_fluids', label: 'עצירת כל הנוזלים לחלוטין' }
+          { id: 'mannitol', icon: '🧠', label: 'מניטול/סליין היפרטוני 3%' },
+          { id: 'ct_head', icon: '🩻', label: 'דחוף ל-CT ראש' },
+          { id: 'elevate_head', icon: '🛏️', label: 'הגבהת ראש ל-30°' },
+          { id: 'stop_fluids', icon: '🛑', label: 'עצירת כל הנוזלים' }
         ],
-        hint: 'ברדיקרדיה ויתר לחץ דם? זו טריאדה של קושינג! יש לו בצקת מוחית. אל תחכי להדמיה כדי לטפל בזה.'
+        hint: 'ברדיקרדיה ויתר לחץ דם? זו טריאדת קושינג! בצקת מוחית! אל תחכי להדמיה.'
       }
     ]
   }
 };
 
 const INITIAL_STATE = {
-  activeCaseId: null, // null אומר שאנחנו במסך הראשי
+  activeCaseId: null,
   currentStage: 0,
   vitals: {},
   vitality: 100,
@@ -86,16 +89,35 @@ const INITIAL_STATE = {
 
 export default function App() {
   const [gameState, setGameState] = useState(() => {
-    const saved = localStorage.getItem('pediatricQuest_v3');
+    const saved = localStorage.getItem('pediatricQuest_v4');
     if (saved) return JSON.parse(saved);
     return INITIAL_STATE;
   });
 
   const [selectedActions, setSelectedActions] = useState([]);
+  const [isShaking, setIsShaking] = useState(false);
+  const [toast, setToast] = useState(null);
+  const chatEndRef = useRef(null);
 
+  // שמירה מקומית
   useEffect(() => {
-    localStorage.setItem('pediatricQuest_v3', JSON.stringify(gameState));
+    localStorage.setItem('pediatricQuest_v4', JSON.stringify(gameState));
   }, [gameState]);
+
+  // גלילה אוטומטית למטה כשנוספת הודעה
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [gameState.logs]);
+
+  // טיימר לפופ-אפ (Toast)
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const handleStartCase = (caseId) => {
     const selectedCase = CASES[caseId];
@@ -104,7 +126,7 @@ export default function App() {
       currentStage: 0,
       vitals: { ...selectedCase.initialVitals },
       vitality: 100,
-      logs: [selectedCase.stages[0].description],
+      logs: [createMsg(selectedCase.stages[0].description, 'system')],
       status: 'active'
     });
     setSelectedActions([]);
@@ -118,176 +140,174 @@ export default function App() {
 
   const handleConsultSenior = () => {
     const currentCase = CASES[gameState.activeCaseId];
-    let newLogs = [...gameState.logs];
-    newLogs.push(`👨‍⚕️ כונן: "הערת אותי ב-3 לפנות בוקר, עדי! רמז: ${currentCase.stages[gameState.currentStage].hint}"`);
-    
     setGameState(prev => ({
       ...prev,
       vitality: Math.max(0, prev.vitality - 15),
-      logs: newLogs
+      logs: [...prev.logs, createMsg(`הערת אותי ב-3 לפנות בוקר, עדי! רמז: ${currentCase.stages[gameState.currentStage].hint}`, 'senior')]
     }));
   };
 
-  const executeNicuLogic = (newVitals, newLogs, newVitality, newStage, newStatus) => {
-    let isPenalty = false;
+  const triggerError = (msg, toastJoke, vitalityPenalty, statDrops, stateRef) => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 400);
+    if (toastJoke) setToast(toastJoke);
     
-    if (newStage === 0) {
-      if (selectedActions.includes('surfactant') && !selectedActions.includes('cpap')) {
-        newLogs.push("❌ קופצת מהר מדי! גם למיה קולוצ'י לקח זמן להבין שהיא מאוהבת. תתחילי בייצוב ומשם נתקדם.");
-        newVitality -= 20; newVitals.sat -= 2; isPenalty = true;
-      }
-      else if (selectedActions.includes('acamoli')) {
-        newLogs.push("❌ אקמולי?! המדדים שלו צונחים מהר יותר מהקריירה של מריצה אחרי שהעלית וואי התפרקו.");
-        newVitality -= 25; newVitals.sat -= 3; isPenalty = true;
-      }
-      else if (selectedActions.includes('cxr') && !selectedActions.includes('cpap')) {
-        newLogs.push("❌ הדמיה לפני נתיב אוויר? הוא מכחיל פה! קודם ABC.");
-        newVitality -= 15; newVitals.sat -= 4; isPenalty = true;
-      }
-
-      if (!isPenalty) {
-        if (selectedActions.includes('cpap') && selectedActions.includes('abx') && selectedActions.includes('cultures')) {
-          newLogs.push("✅ מעולה! ייצבת את הפג מבחינה נשימתית. עוברים לשלב הבא.");
-          newVitals.sat = 94; newVitals.rr = 55; newStage = 1;
-          newLogs.push(CASES.nicu.stages[1].description);
-        } else {
-          newLogs.push("⚠️ הפעולות שביצעת לא מספיקות, המדדים ללא שינוי.");
-          newVitality -= 5;
-        }
-      }
-    } else if (newStage === 1) {
-      if (selectedActions.includes('feed') || selectedActions.includes('lasix')) {
-        newLogs.push("❌ משתנים עכשיו?! המעי שלו לא מוכן וזה לא בצקת. את מאבדת זמן!");
-        newVitality -= 20; newVitals.sat -= 5; isPenalty = true;
-      }
-      if (!isPenalty) {
-        if (selectedActions.includes('intubate_surf')) {
-          newLogs.push("✅ החלטה מושלמת! הפג עבר אינטובציה וקיבל סורפקטנט.");
-          newVitals.sat = 98; newVitals.rr = 40; newStatus = 'success';
-        } else {
-          newLogs.push("❌ המתנת יותר מדי והוא קרס.");
-          newVitality -= 20; newVitals.sat -= 10;
-        }
-      }
-    }
-    return { newVitals, newLogs, newVitality, newStage, newStatus };
-  };
-
-  const executeDkaLogic = (newVitals, newLogs, newVitality, newStage, newStatus) => {
-    let isPenalty = false;
-    
-    if (newStage === 0) {
-      if (selectedActions.includes('insulin_bolus')) {
-        newLogs.push("❌ בולוס אינסולין לפני נוזלים?! זה מתכון בטוח לבצקת מוחית! לחץ הדם שלו צנח לרצפה.");
-        newVitality -= 35; newVitals.bp = '60/30'; newVitals.hr = 180; isPenalty = true;
-      }
-      else if (selectedActions.includes('intubation')) {
-        newLogs.push("❌ אינטובציה ב-DKA כשלא חייבים יכולה לגרום לדום לב בגלל פגיעה בפיצוי הנשימתי של החמצת. תזהרי!");
-        newVitality -= 20; isPenalty = true;
-      }
-
-      if (!isPenalty) {
-        if (selectedActions.includes('ns_bolus') && selectedActions.includes('labs')) {
-          newLogs.push("✅ מצוין! נתת בולוס נוזלים ולחץ הדם מתחיל לעלות (100/60). שלחת מעבדה.");
-          newVitals.bp = '100/60'; newVitals.hr = 120; newStage = 1;
-          newLogs.push(CASES.dka.stages[1].description);
-        } else {
-          newLogs.push("⚠️ חסרות פעולות קריטיות להצלת חיים בשוק. הילד מדרדר.");
-          newVitality -= 10;
-        }
-      }
-    } 
-    else if (newStage === 1) {
-      if (selectedActions.includes('bicarb')) {
-        newLogs.push("❌ נתת ביקרבונט?! המוח שלו מתנפח עכשיו כמו האגו של פבלו בוסטמנטה. ביקרבונט מחמיר חמצת פרדוקסלית ב-CNS!");
-        newVitality -= 30; newVitals.hr = 140; isPenalty = true;
-      }
-      else if (selectedActions.includes('push_k')) {
-        newLogs.push("❌ פוש של אשלגן?! זה לא 'פינת אור' פה, פוש של אשלגן גורם לדום לב מיידי!");
-        newVitality -= 100; isPenalty = true; // פסילה מיידית
-      }
-
-      if (!isPenalty) {
-        if (selectedActions.includes('insulin_drip') && selectedActions.includes('add_k')) {
-          newLogs.push("✅ נהדר. אינסולין רציף יעצור את הקטוגנזה, והאשלגן במערכת מונע היפוקלמיה מסוכנת. עוברים לשלב הבא.");
-          newVitals.hr = 100; newStage = 2;
-          newLogs.push(CASES.dka.stages[2].description);
-        } else {
-          newLogs.push("⚠️ חסר כיסוי אינסולין או אשלגן. החמצת לא משתפרת.");
-          newVitality -= 15;
-        }
-      }
-    }
-    else if (newStage === 2) {
-      if (selectedActions.includes('ct_head') && !selectedActions.includes('mannitol')) {
-        newLogs.push("❌ לשלוח ל-CT לפני טיפול?! הלחץ התוך גולגלתי עולה כמו בפרק הסיום של העונה הראשונה. הוא יבצע הרניאציה בתוך הסורק!");
-        newVitality -= 30; newVitals.hr = 40; isPenalty = true;
-      }
-
-      if (!isPenalty) {
-        if (selectedActions.includes('mannitol') && selectedActions.includes('elevate_head')) {
-          newLogs.push("✅ הצלת לו את החיים (ואת המוח)! מתן חומר אוסמוטי והרמת ראש טיפלו בבצקת המוחית בזמן.");
-          newVitals.hr = 85; newVitals.bp = '110/70'; newStatus = 'success';
-        } else {
-          newLogs.push("⚠️ הפעולות שביצעת לא פתרו את הבצקת המוחית.");
-          newVitality -= 20;
-        }
-      }
-    }
-    return { newVitals, newLogs, newVitality, newStage, newStatus };
+    stateRef.newLogs.push(createMsg(msg, 'error'));
+    stateRef.newVitality -= vitalityPenalty;
+    if (statDrops.sat) stateRef.newVitals.sat -= statDrops.sat;
+    if (statDrops.hr) stateRef.newVitals.hr = statDrops.hr;
+    if (statDrops.bp) stateRef.newVitals.bp = statDrops.bp;
   };
 
   const handleExecuteActions = () => {
     if (selectedActions.length === 0) return;
+    const currentCase = CASES[gameState.activeCaseId];
+    const stageData = currentCase.stages[gameState.currentStage];
 
-    let res = {
+    // יצירת מחרוזת של הפעולות שנבחרו כדי להציג בבועת הצ'אט של המשתמשת
+    const actionNames = selectedActions.map(id => stageData.actions.find(a => a.id === id).label).join(', ');
+
+    let stateRef = {
       newVitals: { ...gameState.vitals },
-      newLogs: [...gameState.logs],
+      newLogs: [...gameState.logs, createMsg(`בחרתי לבצע: ${actionNames}`, 'user')],
       newVitality: gameState.vitality,
       newStage: gameState.currentStage,
       newStatus: gameState.status
     };
 
-    if (gameState.activeCaseId === 'nicu') {
-      res = executeNicuLogic(res.newVitals, res.newLogs, res.newVitality, res.newStage, res.newStatus);
-    } else if (gameState.activeCaseId === 'dka') {
-      res = executeDkaLogic(res.newVitals, res.newLogs, res.newVitality, res.newStage, res.newStatus);
+    let isPenalty = false;
+    const isNicu = gameState.activeCaseId === 'nicu';
+    const isDka = gameState.activeCaseId === 'dka';
+
+    // --- לוגיקת NICU ---
+    if (isNicu && stateRef.newStage === 0) {
+      if (selectedActions.includes('surfactant') && !selectedActions.includes('cpap')) {
+        triggerError("קופצת מהר מדי! תתחילי בייצוב נשימתי ומשם נתקדם.", "גם למיה קולוצ'י לקח זמן להבין שהיא מאוהבת...", 20, {sat: 2}, stateRef);
+        isPenalty = true;
+      } else if (selectedActions.includes('acamoli')) {
+        triggerError("אקמולי?! המדדים שלו צונחים!", "צונחים מהר יותר מהקריירה של מריצה אחרי העלית וואי!", 25, {sat: 3}, stateRef);
+        isPenalty = true;
+      } else if (selectedActions.includes('cxr') && !selectedActions.includes('cpap')) {
+        triggerError("הדמיה לפני נתיב אוויר? הוא מכחיל פה! קודם ABC.", null, 15, {sat: 4}, stateRef);
+        isPenalty = true;
+      }
+      
+      if (!isPenalty) {
+        if (selectedActions.includes('cpap') && selectedActions.includes('abx') && selectedActions.includes('cultures')) {
+          stateRef.newLogs.push(createMsg("מעולה! ייצבת את הפג מבחינה נשימתית והתחלת בירור.", 'success'));
+          stateRef.newVitals.sat = 94; stateRef.newVitals.rr = 55; stateRef.newStage = 1;
+          stateRef.newLogs.push(createMsg(currentCase.stages[1].description, 'system'));
+        } else {
+          stateRef.newLogs.push(createMsg("הפעולות שביצעת לא מספיקות, המדדים ללא שינוי.", 'system'));
+          stateRef.newVitality -= 5;
+        }
+      }
+    } 
+    else if (isNicu && stateRef.newStage === 1) {
+      if (selectedActions.includes('feed') || selectedActions.includes('lasix')) {
+        triggerError("משתנים/כלכלה עכשיו?! המעי לא מוכן וזה לא בצקת. איבדת זמן!", null, 20, {sat: 5}, stateRef);
+        isPenalty = true;
+      }
+      if (!isPenalty) {
+        if (selectedActions.includes('intubate_surf')) {
+          stateRef.newLogs.push(createMsg("החלטה מושלמת! הפג עבר אינטובציה וקיבל סורפקטנט.", 'success'));
+          stateRef.newVitals.sat = 98; stateRef.newVitals.rr = 40; stateRef.newStatus = 'success';
+        } else {
+          triggerError("המתנת יותר מדי והוא קרס.", null, 20, {sat: 10}, stateRef);
+        }
+      }
     }
 
-    if (res.newVitality <= 0 || res.newVitals.sat < 70 || res.newVitals.hr < 45) {
-      res.newLogs.push("💀 המטופל קרס מבחינה המודינמית/נוירולוגית או שאיבדת יותר מדי זמן. המקרה נכשל.");
-      res.newStatus = 'failed';
+    // --- לוגיקת DKA ---
+    if (isDka && stateRef.newStage === 0) {
+      if (selectedActions.includes('insulin_bolus')) {
+        triggerError("בולוס אינסולין לפני נוזלים?! סכנה לבצקת מוחית! ל\"ד צנח.", "זה לא 'פינת אור' פה, עדי!", 35, {bp: '60/30', hr: 180}, stateRef);
+        isPenalty = true;
+      } else if (selectedActions.includes('intubation')) {
+        triggerError("אינטובציה ב-DKA כשלא חייבים יכולה לגרום לדום לב בגלל אובדן פיצוי נשימתי.", null, 20, {}, stateRef);
+        isPenalty = true;
+      }
+      if (!isPenalty) {
+        if (selectedActions.includes('ns_bolus') && selectedActions.includes('labs')) {
+          stateRef.newLogs.push(createMsg("מצוין! נוזלים העלו ל\"ד (100/60). שלחת מעבדה.", 'success'));
+          stateRef.newVitals.bp = '100/60'; stateRef.newVitals.hr = 120; stateRef.newStage = 1;
+          stateRef.newLogs.push(createMsg(currentCase.stages[1].description, 'system'));
+        } else {
+          stateRef.newLogs.push(createMsg("חסרות פעולות קריטיות להצלת חיים בשוק.", 'system'));
+          stateRef.newVitality -= 10;
+        }
+      }
+    }
+    else if (isDka && stateRef.newStage === 1) {
+      if (selectedActions.includes('bicarb')) {
+        triggerError("ביקרבונט?! המוח שלו מתנפח. זה מחמיר חמצת פרדוקסלית במוח!", "המוח מתנפח יותר מהאגו של פבלו בוסטמנטה!", 30, {hr: 140}, stateRef);
+        isPenalty = true;
+      } else if (selectedActions.includes('push_k')) {
+        triggerError("פוש אשלגן גורם לדום לב מיידי!", null, 100, {}, stateRef);
+        isPenalty = true;
+      }
+      if (!isPenalty) {
+        if (selectedActions.includes('insulin_drip') && selectedActions.includes('add_k')) {
+          stateRef.newLogs.push(createMsg("נהדר. אינסולין יעצור קטוגנזה, אשלגן ימנע היפוקלמיה מסוכנת.", 'success'));
+          stateRef.newVitals.hr = 100; stateRef.newStage = 2;
+          stateRef.newLogs.push(createMsg(currentCase.stages[2].description, 'system'));
+        } else {
+          stateRef.newLogs.push(createMsg("חסר כיסוי אינסולין או אשלגן.", 'system'));
+          stateRef.newVitality -= 15;
+        }
+      }
+    }
+    else if (isDka && stateRef.newStage === 2) {
+      if (selectedActions.includes('ct_head') && !selectedActions.includes('mannitol')) {
+        triggerError("לשלוח ל-CT לפני טיפול?! הלחץ התוך גולגלתי עולה, הוא יבצע הרניאציה בסורק!", "דרמה כמו בפרק הסיום של העונה הראשונה!", 30, {hr: 40}, stateRef);
+        isPenalty = true;
+      }
+      if (!isPenalty) {
+        if (selectedActions.includes('mannitol') && selectedActions.includes('elevate_head')) {
+          stateRef.newLogs.push(createMsg("הצלת לו את החיים (ואת המוח)! הטיפול בבצקת עבד.", 'success'));
+          stateRef.newVitals.hr = 85; stateRef.newVitals.bp = '110/70'; stateRef.newStatus = 'success';
+        } else {
+          stateRef.newLogs.push(createMsg("הפעולות שביצעת לא פתרו את הבצקת המוחית.", 'system'));
+          stateRef.newVitality -= 20;
+        }
+      }
+    }
+
+    // בדיקת קריסה המודינמית/זמן
+    if (stateRef.newVitality <= 0 || (stateRef.newVitals.sat && stateRef.newVitals.sat < 70) || stateRef.newVitals.hr < 45) {
+      stateRef.newLogs.push(createMsg("הילד קרס, או שאיבדת יותר מדי זמן. המקרה נכשל.", 'error'));
+      stateRef.newStatus = 'failed';
     }
 
     setGameState({
-      activeCaseId: gameState.activeCaseId,
-      currentStage: res.newStage,
-      vitals: res.newVitals,
-      vitality: res.newVitality,
-      logs: res.newLogs,
-      status: res.newStatus
+      ...gameState,
+      currentStage: stateRef.newStage,
+      vitals: stateRef.newVitals,
+      vitality: stateRef.newVitality,
+      logs: stateRef.newLogs,
+      status: stateRef.newStatus
     });
     setSelectedActions([]); 
   };
 
-  const handleReturnToMenu = () => {
-    setGameState(INITIAL_STATE);
-    setSelectedActions([]);
+  // פונקציות צבעי מדדים למוניטור
+  const getHrClass = (hr) => {
+    if (hr > 160) return 'pulse-fast';
+    if (hr < 60) return 'pulse-slow';
+    return '';
   };
+  const getSatClass = (sat) => (sat < 90 ? 'alert-flash' : '');
 
-  // --- מסך התפריט הראשי ---
+  const vitalityColor = gameState.vitality > 60 ? '#34d399' : (gameState.vitality > 30 ? '#fbbf24' : '#ef4444');
+
   if (gameState.status === 'menu') {
     return (
-      <div className="app-container" style={{ textAlign: 'center', padding: '2rem' }}>
-        <h1 style={{ color: '#0284c7', marginBottom: '2rem' }}>🩺 Pediatric Quest</h1>
-        <h2>שלום עדי, באיזו מחלקה את משבצת את עצמך היום?</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '2rem' }}>
+      <div className="app-container" style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
+        <h1 style={{ color: '#0284c7', marginBottom: '0.5rem', fontSize: '2.2rem' }}>🩺 Pediatric Quest</h1>
+        <p style={{ color: '#64748b', marginBottom: '2rem' }}>מוכנה למשמרת, עדי?</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
           {Object.values(CASES).map(caseObj => (
-            <button 
-              key={caseObj.id} 
-              onClick={() => handleStartCase(caseObj.id)}
-              style={{ padding: '1.5rem', fontSize: '1.2rem', backgroundColor: '#e0f2fe', border: '2px solid #bae6fd', borderRadius: '12px', cursor: 'pointer' }}
-            >
+            <button key={caseObj.id} onClick={() => handleStartCase(caseObj.id)} style={{ padding: '1.2rem', fontSize: '1.1rem', backgroundColor: '#e0f2fe', color: '#0369a1', border: 'none', borderRadius: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
               {caseObj.title}
             </button>
           ))}
@@ -296,94 +316,90 @@ export default function App() {
     );
   }
 
-  // --- מסך המשחק (פעיל) ---
   const currentCase = CASES[gameState.activeCaseId];
 
   return (
-    <div className="app-container">
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <button onClick={handleReturnToMenu} style={{ padding: '0.5rem', cursor: 'pointer' }}>🔙 לתפריט</button>
-        <div style={{ backgroundColor: gameState.vitality > 40 ? '#d1fae5' : '#fee2e2', padding: '0.5rem', borderRadius: '8px', fontWeight: 'bold' }}>
-          מד זמן/אנרגיה: {gameState.vitality}%
+    <div className={`app-container ${isShaking ? 'shake-screen' : ''}`}>
+      
+      <div className="vitality-container">
+        <div className="vitality-header">
+          <span>🔙 <span onClick={() => setGameState(INITIAL_STATE)} style={{cursor:'pointer', color:'#3b82f6'}}>לתפריט</span></span>
+          <span>זמן ומשאבים: {gameState.vitality}%</span>
+        </div>
+        <div className="vitality-bar-bg">
+          <div className="vitality-bar-fill" style={{ width: `${gameState.vitality}%`, backgroundColor: vitalityColor }}></div>
         </div>
       </div>
 
       <div className="monitor">
         <div className="vital-sign">
           <span className="vital-label">HR</span>
-          <span style={{ color: (gameState.vitals.hr > 160 || gameState.vitals.hr < 60) ? '#fca5a5' : '#a7f3d0' }}>{gameState.vitals.hr}</span>
+          <span className={getHrClass(gameState.vitals.hr)}>{gameState.vitals.hr}</span>
         </div>
         <div className="vital-sign">
           <span className="vital-label">RR</span>
-          <span style={{ color: gameState.vitals.rr > 60 ? '#fca5a5' : '#a7f3d0' }}>{gameState.vitals.rr}</span>
+          <span style={{ color: gameState.vitals.rr > 60 ? '#fca5a5' : 'inherit' }}>{gameState.vitals.rr}</span>
         </div>
         <div className="vital-sign">
           <span className="vital-label">SpO2</span>
-          <span style={{ color: gameState.vitals.sat < 90 ? '#fca5a5' : '#a7f3d0' }}>{gameState.vitals.sat}%</span>
+          <span className={getSatClass(gameState.vitals.sat)}>{gameState.vitals.sat}%</span>
         </div>
         {gameState.vitals.bp && (
           <div className="vital-sign">
             <span className="vital-label">BP</span>
-            <span style={{ color: '#a7f3d0' }}>{gameState.vitals.bp}</span>
+            <span>{gameState.vitals.bp}</span>
           </div>
         )}
       </div>
 
       <div className="content">
-        <div className="log-box">
-          {gameState.logs.map((log, index) => (
-            <div key={index} className="log-entry" style={{ color: log.startsWith('❌') ? 'red' : (log.startsWith('✅') ? 'green' : 'inherit') }}>
-              {log}
+        <div className="chat-box">
+          {gameState.logs.map((msg) => (
+            <div key={msg.id} className={`bubble ${msg.sender}`}>
+              {msg.sender === 'senior' && '👨‍⚕️ '}
+              {msg.sender === 'user' && '👩‍⚕️ '}
+              {msg.text}
             </div>
           ))}
+          <div ref={chatEndRef} />
         </div>
 
         {gameState.status === 'active' && (
           <>
-            <h3 style={{ marginBottom: '1rem' }}>מה הפעולות הבאות שלך?</h3>
             <div className="actions-container">
-              {currentCase.stages[gameState.currentStage].actions.map(action => (
-                <label key={action.id} className="action-label">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedActions.includes(action.id)}
-                    onChange={() => handleToggleAction(action.id)}
-                  />
-                  {action.label}
-                </label>
-              ))}
+              {currentCase.stages[gameState.currentStage].actions.map(action => {
+                const isSelected = selectedActions.includes(action.id);
+                return (
+                  <div key={action.id} className={`action-card ${isSelected ? 'selected' : ''}`} onClick={() => handleToggleAction(action.id)}>
+                    <span className="action-icon">{action.icon}</span>
+                    <span className="action-text">{action.label}</span>
+                  </div>
+                );
+              })}
             </div>
             
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-              <button className="submit-btn" onClick={handleExecuteActions}>בצעי פעולות</button>
-              <button onClick={handleConsultSenior} style={{ backgroundColor: '#fde047', border: 'none', padding: '1rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>📱 כונן</button>
-            </div>
+            <button className="submit-btn" onClick={handleExecuteActions}>בצעי פעולות</button>
+            
+            <button className="fab-senior" onClick={handleConsultSenior} title="התייעצות עם הכונן">
+              📱
+            </button>
           </>
         )}
 
         {gameState.status === 'success' && (
-          <div className="success-box">
-            <h3>🎉 המקרה הושלם בהצלחה! 🎉</h3>
-            <div className="pearl-box">
-              <strong>פנינת נלסון (DKA Cerebral Edema):</strong><br/>
-              בצקת מוחית מופיעה לרוב 4-12 שעות מתחילת הטיפול ב-DKA. יש לטפל מידית עם מניטול או סליין היפרטוני (3%) על סמך חשד קליני בלבד, *לפני* ביצוע הדמיה (CT). בנוסף, אין לעצור נוזלים לחלוטין אלא להפחית את הקצב ב-1/3.
-            </div>
+          <div style={{ backgroundColor: '#d1fae5', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', border: '2px solid #34d399' }}>
+            <h3 style={{color: '#065f46'}}>🎉 המקרה הושלם בהצלחה!</h3>
           </div>
         )}
 
         {gameState.status === 'failed' && (
-          <div style={{ backgroundColor: '#fee2e2', padding: '1.5rem', borderRadius: '8px', textAlign: 'center', marginTop: '1rem' }}>
-            <h3>💔 המקרה נכשל</h3>
-            <p>הילד קרס. רפואה דחופה היא עסק אכזרי, קחי נשימה ודברי עם בלן אם צריך.</p>
+          <div style={{ backgroundColor: '#fee2e2', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', border: '2px solid #ef4444' }}>
+            <h3 style={{color: '#991b1b'}}>💔 המקרה נכשל</h3>
           </div>
         )}
-
-        {(gameState.status === 'success' || gameState.status === 'failed') && (
-          <button className="reset-btn" onClick={() => handleStartCase(gameState.activeCaseId)} style={{ marginTop: '1.5rem', width: '100%', padding: '1rem', backgroundColor: '#e2e8f0', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-            נסי את המקרה שוב
-          </button>
-        )}
       </div>
+
+      {toast && <div className="toast-container">{toast}</div>}
     </div>
   );
 }
